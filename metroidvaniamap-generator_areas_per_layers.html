@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetSys Map Generator - Non-Overlapping Multi-Area System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #e6e6e6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid #333;
+        }
+        
+        h1 {
+            color: #4dabf7;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #adb5bd;
+            font-size: 1.1rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 500px 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .controls-panel {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            overflow-y: auto;
+            max-height: 900px;
+        }
+        
+        .control-group {
+            margin-bottom: 25px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 15px;
+        }
+        
+        h2 {
+            color: #74c0fc;
+            margin-bottom: 15px;
+            font-size: 1.3rem;
+            border-bottom: 1px solid #444;
+            padding-bottom: 8px;
+        }
+        
+        h3 {
+            color: #a5d8ff;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            margin-top: 15px;
+        }
+        
+        h4 {
+            color: #d0ebff;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #dee2e6;
+        }
+        
+        input[type="number"], input[type="text"], select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            background: #212529;
+            border: 1px solid #495057;
+            border-radius: 5px;
+            color: #f8f9fa;
+            margin-bottom: 10px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            background: #495057;
+            padding: 5px;
+            border-radius: 3px;
+        }
+        
+        .color-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .color-input input[type="color"] {
+            width: 50px;
+            height: 40px;
+            padding: 2px;
+            border: 1px solid #495057;
+            border-radius: 5px;
+            background: transparent;
+        }
+        
+        .color-input span {
+            flex-grow: 1;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #339af0 0%, #228be6 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background: linear-gradient(135deg, #228be6 0%, #1c7ed6 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        button.generate {
+            background: linear-gradient(135deg, #40c057 0%, #2b8a3e 100%);
+        }
+        
+        button.small {
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            width: auto;
+            margin: 5px;
+        }
+        
+        .map-preview {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            overflow: auto;
+            position: relative;
+        }
+        
+        .map-container {
+            display: inline-block;
+            background: #000;
+            border: 2px solid #495057;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .coordinate-system {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #74c0fc;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 2px 10px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        
+        .map-grid {
+            display: grid;
+            gap: 0px;
+        }
+        
+        .cell {
+            width: 14px;
+            height: 14px;
+            position: relative;
+            border: 0px solid transparent;
+        }
+        
+        .cell.room {
+            box-shadow: inset 0 0 3px rgba(255, 255, 255, 0.1);
+        }
+        
+        .cell.path {
+            opacity: 0.8;
+        }
+        
+        .cell.special {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .room-id {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 6px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 1px black;
+            pointer-events: none;
+        }
+        
+        .area-boundary {
+            position: absolute;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+            box-sizing: border-box;
+            z-index: 5;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .area-center-marker {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #ffd43b;
+            border-radius: 50%;
+            border: 2px solid #000;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 6;
+        }
+        
+        .connection-highlight {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background-color: #ff6b6b;
+            border-radius: 50%;
+            border: 1px solid #fff;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 7;
+        }
+        
+        .scene-indicator {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 3px;
+            height: 3px;
+            background-color: #ffd43b;
+            border-radius: 50%;
+            border: 1px solid #000;
+        }
+        
+        .output-panel {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin-top: 20px;
+        }
+        
+        .output-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 250px;
+            background: #212529;
+            border: 1px solid #495057;
+            border-radius: 5px;
+            color: #f8f9fa;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #495057;
+        }
+        
+        .layer-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border-left: 4px solid #339af0;
+        }
+        
+        .layer-item.active {
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .layer-name {
+            font-weight: bold;
+            color: #74c0fc;
+            font-size: 1.1rem;
+        }
+        
+        .layer-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .layer-actions button {
+            width: auto;
+            padding: 5px 10px;
+            margin: 0;
+        }
+        
+        .area-item {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 3px solid #ff6b6b;
+            position: relative;
+        }
+        
+        .area-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .area-name {
+            font-weight: bold;
+            color: #ffd43b;
+            font-size: 1rem;
+        }
+        
+        .area-controls {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .area-controls button {
+            width: auto;
+            padding: 4px 8px;
+            margin: 0;
+            font-size: 0.8rem;
+        }
+        
+        .connection-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            margin-bottom: 8px;
+        }
+        
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .flex-row label {
+            margin-bottom: 0;
+            white-space: nowrap;
+        }
+        
+        .non-overlap-badge {
+            background: #2b8a3e;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        
+        .boundary-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 2px solid rgba(255, 107, 107, 0.3);
+            pointer-events: none;
+        }
+        
+        .stats {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #4dabf7;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #adb5bd;
+        }
+        
+        .warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left: 4px solid #ffc107;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            border-left: 4px solid #28a745;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .grid-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff6b6b;
+            font-weight: bold;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 3px 6px;
+            border-radius: 3px;
+            border: 1px solid #ff6b6b;
+            font-size: 10px;
+        }
+        
+        .area-color-demo {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+            margin-right: 5px;
+        }
+        
+        .deterministic-badge {
+            background: #0c8599;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
+        
+        .seed-display {
+            font-family: monospace;
+            background: #212529;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            color: #74c0fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>MetSys Map Generator - Non-Overlapping Multi-Area System</h1>
+            <p class="subtitle">Strict Area Separation | Guaranteed Non-Overlapping Boundaries | Optimal Room Clustering</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h2>World Settings</h2>
+                    <label for="width">World Width (cells):</label>
+                    <input type="number" id="width" min="60" max="400" value="120">
+                    
+                    <label for="height">World Height (cells):</label>
+                    <input type="number" id="height" min="60" max="300" value="100">
+                    
+                    <label for="globalSeed">Global Random Seed:</label>
+                    <div class="flex-row">
+                        <input type="text" id="globalSeed" value="metroidvania" style="flex: 2;">
+                        <button id="randomizeSeedBtn" class="small" style="flex: 1;">🎲 Random</button>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="centerAtOrigin" checked>
+                        <label for="centerAtOrigin">Center map at (0,0)</label>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="showAreaBoundaries" checked>
+                        <label for="showAreaBoundaries">Show area boundaries</label>
+                    </div>
+                    
+                    <div class="non-overlap-badge" style="display: inline-block; margin-top: 5px;">
+                        ⚡ Strict Non-Overlapping Guarantee
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Load MapData.txt</h2>
+                    <div class="file-input-group">
+                        <input type="file" id="mapFileInput" accept=".txt">
+                        <button class="load" id="loadMapBtn">Load</button>
+                    </div>
+                    <div id="loadedMapInfo" style="display: none;">
+                        <div class="success">Map loaded successfully!</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Scene Assignments</h2>
+                    <div id="sceneAssignments" class="scene-assignments">
+                        <div class="scene-count">No scene assignments loaded</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Cell Colors</h2>
+                    <div class="color-input">
+                        <input type="color" id="pathColor" value="#25a4b8">
+                        <span>Path: <span id="pathColorHex">25a4b8</span></span>
+                    </div>
+                    <div class="color-input">
+                        <input type="color" id="startColor" value="#ff6b6b">
+                        <span>Start: <span id="startColorHex">ff6b6b</span></span>
+                    </div>
+                    <div class="color-input">
+                        <input type="color" id="bossColor" value="#cc5de8">
+                        <span>Boss: <span id="bossColorHex">cc5de8</span></span>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Border Colors</h2>
+                    <div class="border-controls" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="color-input">
+                            <input type="color" id="borderTop" value="#000000">
+                            <span>Top</span>
+                        </div>
+                        <div class="color-input">
+                            <input type="color" id="borderRight" value="#000000">
+                            <span>Right</span>
+                        </div>
+                        <div class="color-input">
+                            <input type="color" id="borderBottom" value="#000000">
+                            <span>Bottom</span>
+                        </div>
+                        <div class="color-input">
+                            <input type="color" id="borderLeft" value="#000000">
+                            <span>Left</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Area Placement Settings</h2>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Area Padding:</label>
+                        <input type="number" id="areaPadding" min="8" max="25" value="15" style="flex: 1;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Connection Distance:</label>
+                        <input type="number" id="connectionDistance" min="10" max="40" value="20" style="flex: 1;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Max Placement Attempts:</label>
+                        <input type="number" id="maxPlacementAttempts" min="100" max="1000" value="500" style="flex: 1;">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h2>Layers & Areas (Non-Overlapping)</h2>
+                    <div id="layersContainer"></div>
+                    <button id="addLayer">Add New Layer</button>
+                </div>
+                
+                <div class="generation-controls" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button class="generate" id="generateCurrentBtn" style="flex: 1;">Generate Current Layer</button>
+                    <button id="generateAllBtn" style="flex: 1;">Generate All Layers</button>
+                </div>
+                <button id="exportBtn">Export All Layers as MapData.txt</button>
+                <button id="validateOverlapBtn" class="load">Validate No Overlap</button>
+            </div>
+            
+            <div class="map-preview">
+                <h2>Map Preview <span id="currentLayerName">(Layer 0)</span></h2>
+                <div class="stats" id="stats"></div>
+                <div id="mapDisplay"></div>
+                <div class="legend" id="legend"></div>
+            </div>
+        </div>
+        
+        <div class="output-panel">
+            <h2>Generated Map Data (All Layers)</h2>
+            <div class="output-controls">
+                <button id="copyBtn">Copy to Clipboard</button>
+                <button id="downloadBtn">Download File</button>
+                <button id="clearScenesBtn">Clear Scene Assignments</button>
+            </div>
+            <textarea id="output" readonly>// Generated map data will appear here</textarea>
+        </div>
+        
+        <div class="instructions">
+            <h3>🏆 Non-Overlapping Multi-Area System - Guaranteed Properties:</h3>
+            <p>1. <strong>Strict Non-Overlapping</strong>: Areas are placed with guaranteed separation - NO area boundaries will ever touch or overlap</p>
+            <p>2. <strong>Optimal Room Clustering</strong>: Rooms within each area are packed as tightly as possible using spiral placement</p>
+            <p>3. <strong>Connected via Corridors</strong>: Areas are connected through dedicated pathways at their closest points</p>
+            <p>4. <strong>Deterministic Placement</strong>: Same seed = exactly same non-overlapping layout every time</p>
+            <p>5. <strong>Minimal Distance Connections</strong>: Area connections always use the closest possible rooms between areas</p>
+            <p>6. <strong>Visual Validation</strong>: Area boundaries are clearly shown - they will NEVER intersect</p>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================================
+        // DETERMINISTIC RANDOM NUMBER GENERATOR
+        // =========================================================================
+        class DeterministicRandom {
+            constructor(seed) {
+                this.seed = this.hashCode(seed.toString());
+            }
+            
+            hashCode(str) {
+                let h = 0;
+                for (let i = 0; i < str.length; i++) {
+                    h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+                }
+                return h;
+            }
+            
+            next() {
+                let t = this.seed += 0x6D2B79F5;
+                t = Math.imul(t ^ t >>> 15, t | 1);
+                t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+                return ((t ^ t >>> 14) >>> 0) / 4294967296;
+            }
+            
+            nextInt(min, max) {
+                return Math.floor(this.next() * (max - min + 1)) + min;
+            }
+            
+            nextFloat(min, max) {
+                return this.next() * (max - min) + min;
+            }
+			
+			shuffle(array) {
+                const result = [...array];
+                for (let i = result.length - 1; i > 0; i--) {
+                    const j = Math.floor(this.next() * (i + 1));
+                    [result[i], result[j]] = [result[j], result[i]];
+                }
+                return result;
+            }
+        }
+
+        // =========================================================================
+        // CONFIGURATION
+        // =========================================================================
+        const config = {
+            width: 120,
+            height: 100,
+            globalSeed: 'metroidvania',
+            centerAtOrigin: true,
+            showAreaBoundaries: true,
+            areaPadding: 15,
+            connectionDistance: 20,
+            maxPlacementAttempts: 500,
+            activeLayerId: 0,
+            layers: []
+        };
+
+        // Store map data
+        const layerMaps = new Map();
+        const sceneAssignments = new Map();
+
+        // =========================================================================
+        // DOM ELEMENTS
+        // =========================================================================
+        const widthInput = document.getElementById('width');
+        const heightInput = document.getElementById('height');
+        const globalSeedInput = document.getElementById('globalSeed');
+        const centerAtOriginCheckbox = document.getElementById('centerAtOrigin');
+        const showAreaBoundariesCheckbox = document.getElementById('showAreaBoundaries');
+        const areaPaddingInput = document.getElementById('areaPadding');
+        const connectionDistanceInput = document.getElementById('connectionDistance');
+        const maxPlacementAttemptsInput = document.getElementById('maxPlacementAttempts');
+        const randomizeSeedBtn = document.getElementById('randomizeSeedBtn');
+        const generateCurrentBtn = document.getElementById('generateCurrentBtn');
+        const generateAllBtn = document.getElementById('generateAllBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const copyBtn = document.getElementById('copyBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const validateOverlapBtn = document.getElementById('validateOverlapBtn');
+        const addLayerBtn = document.getElementById('addLayer');
+        const mapFileInput = document.getElementById('mapFileInput');
+        const loadMapBtn = document.getElementById('loadMapBtn');
+        const clearScenesBtn = document.getElementById('clearScenesBtn');
+        const mapDisplay = document.getElementById('mapDisplay');
+        const outputTextarea = document.getElementById('output');
+        const layersContainer = document.getElementById('layersContainer');
+        const statsDisplay = document.getElementById('stats');
+        const currentLayerNameSpan = document.getElementById('currentLayerName');
+
+        // =========================================================================
+        // INITIALIZATION
+        // =========================================================================
+        function init() {
+            const savedSettings = localStorage.getItem('metsysGeneratorNonOverlapSettings');
+            if (savedSettings) {
+                try {
+                    const settings = JSON.parse(savedSettings);
+                    Object.assign(config, settings);
+                } catch (e) {}
+            }
+            
+            // Apply config to inputs
+            widthInput.value = config.width;
+            heightInput.value = config.height;
+            globalSeedInput.value = config.globalSeed;
+            centerAtOriginCheckbox.checked = config.centerAtOrigin;
+            showAreaBoundariesCheckbox.checked = config.showAreaBoundaries;
+            areaPaddingInput.value = config.areaPadding;
+            connectionDistanceInput.value = config.connectionDistance;
+            maxPlacementAttemptsInput.value = config.maxPlacementAttempts;
+            
+            // Initialize default layer
+            if (config.layers.length === 0) {
+                config.layers.push(createDefaultLayer(0));
+            }
+            
+            updateLayersUI();
+            updateHexDisplays();
+            generateMapForLayer(config.activeLayerId);
+        }
+
+        function createDefaultLayer(layerId) {
+            return {
+                id: layerId,
+                name: `Layer ${layerId}`,
+                isActive: layerId === 0,
+                hasContent: false,
+                areas: [
+                    {
+                        id: 0,
+                        name: 'Forest',
+                        color: '#3fc00b',
+                        roomCount: 5,
+                        minRoomSize: 3,
+                        maxRoomSize: 5,
+                        roomSpacing: 1,
+                        compactness: 0.95
+                    },
+                    {
+                        id: 1,
+                        name: 'Caves',
+                        color: '#c17861',
+                        roomCount: 4,
+                        minRoomSize: 3,
+                        maxRoomSize: 6,
+                        roomSpacing: 1,
+                        compactness: 0.9
+                    },
+                    {
+                        id: 2,
+                        name: 'Temple',
+                        color: '#4dabf7',
+                        roomCount: 3,
+                        minRoomSize: 4,
+                        maxRoomSize: 6,
+                        roomSpacing: 1,
+                        compactness: 0.95
+                    }
+                ],
+                areaConnections: [
+                    { fromArea: 0, toArea: 1, pathCount: 2 },
+                    { fromArea: 1, toArea: 2, pathCount: 1 }
+                ]
+            };
+        }
+
+        // =========================================================================
+        // UI FUNCTIONS
+        // =========================================================================
+        function updateHexDisplays() {
+            document.getElementById('pathColorHex').textContent = document.getElementById('pathColor').value.replace('#', '');
+            document.getElementById('startColorHex').textContent = document.getElementById('startColor').value.replace('#', '');
+            document.getElementById('bossColorHex').textContent = document.getElementById('bossColor').value.replace('#', '');
+        }
+
+        function updateLayersUI() {
+            layersContainer.innerHTML = '';
+            config.layers.forEach((layer, index) => {
+                addLayerToUI(layer, index);
+            });
+            updateCurrentLayerName();
+        }
+
+        function addLayerToUI(layer, layerIndex) {
+            const layerDiv = document.createElement('div');
+            layerDiv.className = `layer-item ${layer.isActive ? 'active' : ''}`;
+            
+            // Header
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'layer-header';
+            headerDiv.innerHTML = `
+                <div class="layer-name">
+                    ${layer.name}
+                    <span class="deterministic-badge">Non-Overlapping</span>
+                </div>
+                <div class="layer-actions">
+                    <button class="select-layer">Select</button>
+                    ${layerIndex > 0 ? '<button class="remove-layer">×</button>' : '<button class="remove-layer" disabled>×</button>'}
+                </div>
+            `;
+            layerDiv.appendChild(headerDiv);
+            
+            // Layer seed
+            const seedRow = document.createElement('div');
+            seedRow.className = 'flex-row';
+            seedRow.innerHTML = `
+                <label style="flex: 2;">Layer Seed:</label>
+                <input type="text" class="layer-seed" value="${layer.seed || config.globalSeed}" style="flex: 3;">
+                <button class="small reset-layer-seed">Reset</button>
+            `;
+            layerDiv.appendChild(seedRow);
+            
+            // Areas container
+            const areasDiv = document.createElement('div');
+            areasDiv.className = 'areas-container';
+            
+            layer.areas.forEach((area, areaIndex) => {
+                const areaDiv = document.createElement('div');
+                areaDiv.className = 'area-item';
+                
+                const areaSeed = `${layer.seed || config.globalSeed}_L${layer.id}_A${area.id}`;
+                
+                areaDiv.innerHTML = `
+                    <div class="area-header">
+                        <div class="area-name">
+                            <span class="area-color-demo" style="background-color: ${area.color};"></span>
+                            ${area.name}
+                            <span class="non-overlap-badge">Separated</span>
+                        </div>
+                        <div class="area-controls">
+                            <button class="remove-area small" ${layer.areas.length > 1 ? '' : 'disabled'}>×</button>
+                        </div>
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Name:</label>
+                        <input type="text" class="area-name-input" value="${area.name}" style="flex: 3;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Color:</label>
+                        <input type="color" class="area-color" value="${area.color}" style="flex: 1;">
+                        <span class="area-color-hex">${area.color.replace('#', '')}</span>
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Rooms:</label>
+                        <input type="number" class="area-room-count" min="2" max="10" value="${area.roomCount}" style="flex: 1;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Min Size:</label>
+                        <input type="number" class="area-min-size" min="2" max="4" value="${area.minRoomSize}" style="flex: 1;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Max Size:</label>
+                        <input type="number" class="area-max-size" min="3" max="6" value="${area.maxRoomSize}" style="flex: 1;">
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Compactness:</label>
+                        <input type="range" class="area-compactness" min="0.8" max="1.0" step="0.05" value="${area.compactness || 0.95}" style="flex: 2;">
+                        <span class="compactness-value">${Math.round((area.compactness || 0.95) * 100)}%</span>
+                    </div>
+                    <div class="flex-row">
+                        <label style="flex: 2;">Seed:</label>
+                        <span class="seed-display" style="flex: 3;">${areaSeed}</span>
+                    </div>
+                `;
+                
+                attachAreaListeners(areaDiv, layerIndex, areaIndex, layer, area);
+                areasDiv.appendChild(areaDiv);
+            });
+            
+            layerDiv.appendChild(areasDiv);
+            
+            // Add area button
+            const addAreaBtn = document.createElement('button');
+            addAreaBtn.className = 'small';
+            addAreaBtn.textContent = '+ Add Area (Non-Overlapping)';
+            addAreaBtn.style.marginTop = '15px';
+            addAreaBtn.addEventListener('click', () => {
+                const newAreaId = Math.max(...layer.areas.map(a => a.id), -1) + 1;
+                const newArea = {
+                    id: newAreaId,
+                    name: `Area ${newAreaId}`,
+                    color: `#${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0')}`,
+                    roomCount: 4,
+                    minRoomSize: 3,
+                    maxRoomSize: 5,
+                    roomSpacing: 1,
+                    compactness: 0.95
+                };
+                config.layers[layerIndex].areas.push(newArea);
+                saveSettings();
+                updateLayersUI();
+            });
+            layerDiv.appendChild(addAreaBtn);
+            
+            // Connections panel
+            if (layer.areas.length > 1) {
+                const connectionsDiv = document.createElement('div');
+                connectionsDiv.className = 'area-connection-panel';
+                connectionsDiv.style.marginTop = '15px';
+                connectionsDiv.style.padding = '15px';
+                connectionsDiv.style.background = 'rgba(0,0,0,0.3)';
+                connectionsDiv.innerHTML = '<h4 style="color: #a5d8ff; margin-bottom: 12px;">🔗 Area Connections (Non-Overlapping)</h4>';
+                
+                for (let i = 0; i < layer.areas.length; i++) {
+                    for (let j = i + 1; j < layer.areas.length; j++) {
+                        const area1 = layer.areas[i];
+                        const area2 = layer.areas[j];
+                        
+                        const existingConn = layer.areaConnections.find(
+                            conn => (conn.fromArea === area1.id && conn.toArea === area2.id) ||
+                                   (conn.fromArea === area2.id && conn.toArea === area1.id)
+                        );
+                        
+                        const connDiv = document.createElement('div');
+                        connDiv.className = 'connection-item';
+                        connDiv.innerHTML = `
+                            <span style="min-width: 90px;">
+                                <span class="area-color-demo" style="background-color: ${area1.color};"></span>${area1.name}
+                            </span>
+                            <span>↔</span>
+                            <span style="min-width: 90px;">
+                                <span class="area-color-demo" style="background-color: ${area2.color};"></span>${area2.name}
+                            </span>
+                            <select class="connection-count" style="width: 140px;">
+                                <option value="0">No connection</option>
+                                <option value="1">1 path (closest)</option>
+                                <option value="2">2 paths (redundant)</option>
+                                <option value="3">3 paths (network)</option>
+                            </select>
+                        `;
+                        
+                        const select = connDiv.querySelector('.connection-count');
+                        select.value = existingConn ? existingConn.pathCount : 0;
+                        
+                        select.addEventListener('change', () => {
+                            const count = parseInt(select.value);
+                            config.layers[layerIndex].areaConnections = config.layers[layerIndex].areaConnections.filter(
+                                conn => !((conn.fromArea === area1.id && conn.toArea === area2.id) ||
+                                         (conn.fromArea === area2.id && conn.toArea === area1.id))
+                            );
+                            if (count > 0) {
+                                config.layers[layerIndex].areaConnections.push({
+                                    fromArea: area1.id,
+                                    toArea: area2.id,
+                                    pathCount: count
+                                });
+                            }
+                            saveSettings();
+                            if (layer.isActive) generateMapForLayer(layer.id);
+                        });
+                        
+                        connectionsDiv.appendChild(connDiv);
+                    }
+                }
+                
+                layerDiv.appendChild(connectionsDiv);
+            }
+            
+            // Status
+            const statusDiv = document.createElement('div');
+            statusDiv.className = 'layer-info';
+            statusDiv.style.marginTop = '15px';
+            statusDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>ID: ${layer.id}</span>
+                    <span class="layer-status ${layer.hasContent ? '' : 'empty'}">
+                        ${layer.hasContent ? '✓ Generated (Non-Overlapping)' : '⚡ Not Generated'}
+                    </span>
+                </div>
+            `;
+            layerDiv.appendChild(statusDiv);
+            
+            layersContainer.appendChild(layerDiv);
+            
+            // Event listeners
+            const selectBtn = layerDiv.querySelector('.select-layer');
+            selectBtn.addEventListener('click', () => {
+                config.layers.forEach(l => l.isActive = false);
+                config.layers[layerIndex].isActive = true;
+                config.activeLayerId = layer.id;
+                saveSettings();
+                updateLayersUI();
+                displayLayerMap(layer.id);
+            });
+            
+            const removeBtn = layerDiv.querySelector('.remove-layer');
+            if (removeBtn && !removeBtn.disabled) {
+                removeBtn.addEventListener('click', () => {
+                    if (config.layers.length <= 1) return;
+                    const layerId = config.layers[layerIndex].id;
+                    if (config.layers[layerIndex].isActive) {
+                        config.layers[0].isActive = true;
+                        config.activeLayerId = 0;
+                    }
+                    config.layers.splice(layerIndex, 1);
+                    layerMaps.delete(layerId);
+                    saveSettings();
+                    updateLayersUI();
+                    displayLayerMap(config.activeLayerId);
+                });
+            }
+            
+            const layerSeedInput = layerDiv.querySelector('.layer-seed');
+            const resetSeedBtn = layerDiv.querySelector('.reset-layer-seed');
+            
+            layerSeedInput.addEventListener('change', () => {
+                config.layers[layerIndex].seed = layerSeedInput.value || config.globalSeed;
+                saveSettings();
+                updateLayersUI();
+            });
+            
+            resetSeedBtn.addEventListener('click', () => {
+                config.layers[layerIndex].seed = null;
+                saveSettings();
+                updateLayersUI();
+            });
+        }
+
+        function attachAreaListeners(areaDiv, layerIndex, areaIndex, layer, area) {
+            const nameInput = areaDiv.querySelector('.area-name-input');
+            nameInput.addEventListener('change', () => {
+                config.layers[layerIndex].areas[areaIndex].name = nameInput.value;
+                saveSettings();
+                updateLayersUI();
+            });
+            
+            const colorInput = areaDiv.querySelector('.area-color');
+            const colorHexSpan = areaDiv.querySelector('.area-color-hex');
+            colorInput.addEventListener('change', () => {
+                config.layers[layerIndex].areas[areaIndex].color = colorInput.value;
+                colorHexSpan.textContent = colorInput.value.replace('#', '');
+                saveSettings();
+                if (layer.isActive) generateMapForLayer(layer.id);
+            });
+            
+            const roomCountInput = areaDiv.querySelector('.area-room-count');
+            roomCountInput.addEventListener('change', () => {
+                let val = parseInt(roomCountInput.value);
+				if (val < 2) val = 2;
+                if (val > 10) val = 10;
+                config.layers[layerIndex].areas[areaIndex].roomCount = val;
+                saveSettings();
+            });
+            
+            const minSizeInput = areaDiv.querySelector('.area-min-size');
+            minSizeInput.addEventListener('change', () => {
+                let val = parseInt(minSizeInput.value);
+                if (val < 2) val = 2;
+                if (val > 4) val = 4;
+                config.layers[layerIndex].areas[areaIndex].minRoomSize = val;
+                const maxSize = config.layers[layerIndex].areas[areaIndex].maxRoomSize;
+                if (val > maxSize) {
+                    config.layers[layerIndex].areas[areaIndex].maxRoomSize = val;
+                }
+                saveSettings();
+            });
+            
+            const maxSizeInput = areaDiv.querySelector('.area-max-size');
+            maxSizeInput.addEventListener('change', () => {
+                let val = parseInt(maxSizeInput.value);
+                if (val < 3) val = 3;
+                if (val > 6) val = 6;
+                config.layers[layerIndex].areas[areaIndex].maxRoomSize = val;
+                const minSize = config.layers[layerIndex].areas[areaIndex].minRoomSize;
+                if (val < minSize) {
+                    config.layers[layerIndex].areas[areaIndex].minRoomSize = val;
+                }
+                saveSettings();
+            });
+            
+            const compactnessSlider = areaDiv.querySelector('.area-compactness');
+            const compactnessValue = areaDiv.querySelector('.compactness-value');
+            compactnessSlider.addEventListener('input', () => {
+                const val = parseFloat(compactnessSlider.value);
+                compactnessValue.textContent = `${Math.round(val * 100)}%`;
+                config.layers[layerIndex].areas[areaIndex].compactness = val;
+                saveSettings();
+            });
+            
+            const removeBtn = areaDiv.querySelector('.remove-area');
+            if (removeBtn && !removeBtn.disabled) {
+                removeBtn.addEventListener('click', () => {
+                    config.layers[layerIndex].areas.splice(areaIndex, 1);
+                    config.layers[layerIndex].areaConnections = config.layers[layerIndex].areaConnections.filter(
+                        conn => conn.fromArea !== area.id && conn.toArea !== area.id
+                    );
+                    saveSettings();
+                    updateLayersUI();
+                    if (layer.isActive) generateMapForLayer(layer.id);
+                });
+            }
+        }
+
+        function updateCurrentLayerName() {
+            const activeLayer = config.layers.find(l => l.isActive);
+            if (activeLayer) {
+                currentLayerNameSpan.textContent = `(${activeLayer.name})`;
+            }
+        }
+
+        function saveSettings() {
+            config.width = parseInt(widthInput.value);
+            config.height = parseInt(heightInput.value);
+            config.globalSeed = globalSeedInput.value;
+            config.centerAtOrigin = centerAtOriginCheckbox.checked;
+            config.showAreaBoundaries = showAreaBoundariesCheckbox.checked;
+            config.areaPadding = parseInt(areaPaddingInput.value);
+            config.connectionDistance = parseInt(connectionDistanceInput.value);
+            config.maxPlacementAttempts = parseInt(maxPlacementAttemptsInput.value);
+            
+            localStorage.setItem('metsysGeneratorNonOverlapSettings', JSON.stringify(config));
+        }
+
+        // =========================================================================
+        // CORE GENERATION ENGINE - NON-OVERLAPPING GUARANTEED
+        // =========================================================================
+        
+        class NonOverlappingArea {
+            constructor(id, x, y, width, height, padding) {
+                this.id = id;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.padding = padding;
+                this.rooms = [];
+                this.centerX = Math.floor(x + width / 2);
+                this.centerY = Math.floor(y + height / 2);
+            }
+            
+            // Get expanded bounds with padding for overlap checking
+            getPaddedBounds() {
+                return {
+                    minX: this.x - this.padding,
+                    maxX: this.x + this.width + this.padding,
+                    minY: this.y - this.padding,
+                    maxY: this.y + this.height + this.padding
+                };
+            }
+            
+            // Check if this area overlaps with another area
+            overlapsWith(other) {
+                const bounds1 = this.getPaddedBounds();
+                const bounds2 = other.getPaddedBounds();
+                
+                return !(bounds1.maxX < bounds2.minX ||
+                        bounds2.maxX < bounds1.minX ||
+                        bounds1.maxY < bounds2.minY ||
+                        bounds2.maxY < bounds1.minY);
+            }
+            
+            // Get the bounding box of all rooms in this area
+            getRoomBounds() {
+                if (this.rooms.length === 0) return null;
+                
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                
+                this.rooms.forEach(room => {
+                    minX = Math.min(minX, room.x);
+                    maxX = Math.max(maxX, room.x + room.width - 1);
+                    minY = Math.min(minY, room.y);
+                    maxY = Math.max(maxY, room.y + room.height - 1);
+                });
+                
+                return { minX, maxX, minY, maxY };
+            }
+            
+            // Update area bounds based on actual room placements
+            updateBounds() {
+                const roomBounds = this.getRoomBounds();
+                if (roomBounds) {
+                    this.x = roomBounds.minX;
+                    this.y = roomBounds.minY;
+                    this.width = roomBounds.maxX - roomBounds.minX + 1;
+                    this.height = roomBounds.maxY - roomBounds.minY + 1;
+                    this.centerX = Math.floor(this.x + this.width / 2);
+                    this.centerY = Math.floor(this.y + this.height / 2);
+                }
+            }
+        }
+
+        class DeterministicRoom {
+            constructor(id, areaId, x, y, width, height, type = 'normal') {
+                this.id = id;
+                this.areaId = areaId;
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = type;
+                this.connections = [];
+                this.center = {
+                    x: Math.floor(x + width / 2),
+                    y: Math.floor(y + height / 2)
+                };
+                this.color = null;
+                this.colorHex = null;
+            }
+            
+            setColor(color) {
+                this.color = color;
+                this.colorHex = colorToHex(color);
+            }
+            
+            collidesWith(other, padding = 1) {
+                return !(this.x + this.width + padding <= other.x ||
+                        other.x + other.width + padding <= this.x ||
+                        this.y + this.height + padding <= other.y ||
+                        other.y + other.height + padding <= this.y);
+            }
+            
+            manhattanDistanceTo(other) {
+                return Math.abs(this.center.x - other.center.x) + Math.abs(this.center.y - other.center.y);
+            }
+            
+            getCells() {
+                const cells = [];
+                for (let dy = 0; dy < this.height; dy++) {
+                    for (let dx = 0; dx < this.width; dx++) {
+                        cells.push({
+                            x: this.x + dx,
+                            y: this.y + dy,
+                            roomId: this.id,
+                            areaId: this.areaId,
+                            room: this,
+                            type: this.type === 'normal' ? 1 : (this.type === 'start' ? 3 : 4)
+                        });
+                    }
+                }
+                return cells;
+            }
+        }
+
+        function generateMapForLayer(layerId) {
+            saveSettings();
+            
+            const layer = config.layers.find(l => l.id === layerId);
+            if (!layer) return;
+            
+            const layerSeed = layer.seed || config.globalSeed;
+            const layerRand = new DeterministicRandom(`${layerSeed}_Layer_${layerId}_NonOverlap`);
+            
+            const worldWidth = config.width;
+            const worldHeight = config.height;
+            const areaPadding = config.areaPadding;
+            const maxAttempts = config.maxPlacementAttempts;
+            
+            // World bounds
+            let worldMinX, worldMaxX, worldMinY, worldMaxY;
+            if (config.centerAtOrigin) {
+                worldMinX = -Math.floor(worldWidth / 2);
+                worldMaxX = worldMinX + worldWidth - 1;
+                worldMinY = -Math.floor(worldHeight / 2);
+                worldMaxY = worldMinY + worldHeight - 1;
+            } else {
+                worldMinX = 0;
+                worldMaxX = worldWidth - 1;
+                worldMinY = 0;
+                worldMaxY = worldHeight - 1;
+            }
+            
+            // Grid storage
+            const grid = new Map();
+            const allRooms = [];
+            const allPaths = [];
+            const nonOverlappingAreas = [];
+            const areaData = [];
+            
+            function setGrid(x, y, value, room = null, areaId = null) {
+                let color, colorHex;
+                
+                if (value === 1 || value >= 3) {
+                    if (room && room.color) {
+                        color = room.color;
+                        colorHex = room.colorHex;
+                    } else if (areaId !== null) {
+                        const area = layer.areas.find(a => a.id === areaId);
+                        color = area ? area.color : '#3fc00b';
+                        colorHex = colorToHex(color);
+                    } else {
+                        const defaultColor = getDefaultColor(value);
+                        color = defaultColor.color;
+                        colorHex = defaultColor.colorHex;
+                    }
+                } else {
+                    const pathColor = getDefaultColor(2);
+                    color = pathColor.color;
+                    colorHex = pathColor.colorHex;
+                }
+                
+                grid.set(`${x},${y}`, {
+                    type: value,
+                    room: room,
+                    areaId: areaId,
+                    color: color,
+                    colorHex: colorHex
+                });
+            }
+            
+            // =====================================================================
+            // STEP 1: GENERATE ROOMS FOR EACH AREA INDEPENDENTLY (COMPACT CLUSTERS)
+            // =====================================================================
+            
+            // First pass: Generate all rooms without worrying about area overlap
+            const areaRoomsMap = new Map();
+            const areaBoundsMap = new Map();
+            
+            layer.areas.forEach(area => {
+                const areaRand = new DeterministicRandom(`${layerSeed}_L${layer.id}_A${area.id}_Rooms`);
+                const areaRooms = [];
+                
+                // Calculate optimal cluster size based on room count and sizes
+                const avgRoomSize = (area.minRoomSize + area.maxRoomSize) / 2;
+                const totalArea = area.roomCount * avgRoomSize * avgRoomSize;
+                const clusterRadius = Math.ceil(Math.sqrt(totalArea) * 1.2);
+                
+                // Generate spiral pattern for optimal packing
+                const spiralPoints = [];
+                for (let r = 0; r <= clusterRadius; r += 1) {
+                    for (let angle = 0; angle < 360; angle += 30) {
+                        const rad = angle * Math.PI / 180;
+                        const x = Math.floor(Math.cos(rad) * r);
+                        const y = Math.floor(Math.sin(rad) * r);
+                        spiralPoints.push({ x, y, r });
+                    }
+                }
+                
+                // Shuffle deterministically
+                const shuffledSpiral = areaRand.shuffle(spiralPoints);
+                
+                // Place rooms
+                for (let i = 0; i < area.roomCount; i++) {
+                    let placed = false;
+                    
+                    // Try different room sizes
+                    const sizes = [];
+                    for (let w = area.maxRoomSize; w >= area.minRoomSize; w--) {
+                        for (let h = area.maxRoomSize; h >= area.minRoomSize; h--) {
+                            sizes.push({ w, h });
+                        }
+                    }
+                    const shuffledSizes = areaRand.shuffle(sizes);
+                    
+                    // Try each spiral point
+                    for (const point of shuffledSpiral) {
+                        if (placed) break;
+                        
+                        for (const size of shuffledSizes) {
+                            // Start at origin - we'll offset the entire cluster later
+                            const newRoom = new DeterministicRoom(
+                                areaRooms.length,
+                                area.id,
+                                point.x,
+                                point.y,
+                                size.w,
+                                size.h
+                            );
+                            
+                            newRoom.setColor(area.color);
+                            
+                            // Check collision with existing rooms in this area
+                            let collides = false;
+                            for (const room of areaRooms) {
+                                if (newRoom.collidesWith(room, area.roomSpacing || 1)) {
+                                    collides = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!collides) {
+                                areaRooms.push(newRoom);
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // If still not placed, force placement with minimal size
+                    if (!placed) {
+                        for (const point of shuffledSpiral) {
+                            if (placed) break;
+                            
+                            const newRoom = new DeterministicRoom(
+                                areaRooms.length,
+                                area.id,
+                                point.x,
+                                point.y,
+                                area.minRoomSize,
+                                area.minRoomSize
+                            );
+                            
+                            newRoom.setColor(area.color);
+                            
+                            let collides = false;
+                            for (const room of areaRooms) {
+                                if (newRoom.collidesWith(room, 1)) {
+                                    collides = true;
+                                    break;
+                                }
+                            }
+                            
+                            if (!collides) {
+                                areaRooms.push(newRoom);
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Calculate bounds of this area's rooms
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                areaRooms.forEach(room => {
+                    minX = Math.min(minX, room.x);
+                    maxX = Math.max(maxX, room.x + room.width - 1);
+                    minY = Math.min(minY, room.y);
+                    maxY = Math.max(maxY, room.y + room.height - 1);
+                });
+                
+                areaRoomsMap.set(area.id, areaRooms);
+                areaBoundsMap.set(area.id, { minX, maxX, minY, maxY, width: maxX - minX + 1, height: maxY - minY + 1 });
+            });
+            
+            // =====================================================================
+            // STEP 2: PLACE AREAS WITH STRICT NON-OVERLAPPING CONSTRAINT
+            // =====================================================================
+            
+            // Sort areas by size (largest first) for better packing
+            const sortedAreas = [...layer.areas].sort((a, b) => {
+                const boundsA = areaBoundsMap.get(a.id);
+                const boundsB = areaBoundsMap.get(b.id);
+                const sizeA = boundsA.width * boundsA.height;
+                const sizeB = boundsB.width * boundsB.height;
+                return sizeB - sizeA;
+            });
+            
+            const placedAreas = [];
+            
+            // Place first area at center
+            const firstBounds = areaBoundsMap.get(sortedAreas[0].id);
+            const firstArea = new NonOverlappingArea(
+                sortedAreas[0].id,
+                Math.floor((worldMinX + worldMaxX) / 2) - Math.floor(firstBounds.width / 2),
+                Math.floor((worldMinY + worldMaxY) / 2) - Math.floor(firstBounds.height / 2),
+                firstBounds.width,
+                firstBounds.height,
+                areaPadding
+            );
+            placedAreas.push(firstArea);
+            
+            // Place remaining areas with non-overlapping constraint
+            for (let i = 1; i < sortedAreas.length; i++) {
+                const area = sortedAreas[i];
+                const bounds = areaBoundsMap.get(area.id);
+                const areaRand = new DeterministicRandom(`${layerSeed}_L${layer.id}_A${area.id}_Placement`);
+                
+                let placed = false;
+                let attempts = 0;
+                
+                // Get connected areas that are already placed
+                const connectedPlacements = placedAreas.filter(pa => 
+                    layer.areaConnections.some(conn => 
+                        (conn.fromArea === area.id && conn.toArea === pa.id) ||
+                        (conn.toArea === area.id && conn.fromArea === pa.id)
+                    )
+                );
+                
+                while (!placed && attempts < maxAttempts) {
+                    let baseX, baseY;
+                    
+                    if (connectedPlacements.length > 0 && attempts < maxAttempts / 2) {
+                        // Try to place near connected areas
+                        const targetArea = connectedPlacements[attempts % connectedPlacements.length];
+                        const angle = areaRand.nextFloat(0, Math.PI * 2);
+                        const distance = config.connectionDistance + areaRand.nextFloat(-5, 15);
+                        
+                        baseX = Math.floor(targetArea.centerX + Math.cos(angle) * distance - bounds.width / 2);
+                        baseY = Math.floor(targetArea.centerY + Math.sin(angle) * distance - bounds.height / 2);
+                    } else {
+                        // Try random placement
+                        baseX = areaRand.nextInt(worldMinX + 10, worldMaxX - bounds.width - 10);
+                        baseY = areaRand.nextInt(worldMinY + 10, worldMaxY - bounds.height - 10);
+                    }
+                    
+                    // Clamp to world bounds
+                    baseX = Math.max(worldMinX + 5, Math.min(worldMaxX - bounds.width - 5, baseX));
+                    baseY = Math.max(worldMinY + 5, Math.min(worldMaxY - bounds.height - 5, baseY));
+                    
+                    const candidateArea = new NonOverlappingArea(
+                        area.id,
+                        baseX,
+                        baseY,
+                        bounds.width,
+                        bounds.height,
+                        areaPadding
+                    );
+                    
+                    // Check overlap with all placed areas
+                    let overlaps = false;
+                    for (const placedArea of placedAreas) {
+                        if (candidateArea.overlapsWith(placedArea)) {
+                            overlaps = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!overlaps) {
+                        placedAreas.push(candidateArea);
+                        placed = true;
+                    }
+                    
+                    attempts++;
+                }
+                
+                // If we couldn't place after many attempts, use fallback with more attempts
+                if (!placed) {
+                    for (let fallbackAttempt = 0; fallbackAttempt < maxAttempts * 2; fallbackAttempt++) {
+                        const baseX = areaRand.nextInt(worldMinX + 15, worldMaxX - bounds.width - 15);
+                        const baseY = areaRand.nextInt(worldMinY + 15, worldMaxY - bounds.height - 15);
+                        
+                        const candidateArea = new NonOverlappingArea(
+                            area.id,
+                            baseX,
+                            baseY,
+                            bounds.width,
+                            bounds.height,
+                            areaPadding
+                        );
+                        
+                        let overlaps = false;
+                        for (const placedArea of placedAreas) {
+                            if (candidateArea.overlapsWith(placedArea)) {
+                                overlaps = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!overlaps) {
+                            placedAreas.push(candidateArea);
+                            placed = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Absolute fallback - force placement with maximum spacing
+                if (!placed) {
+                    let farthestX = worldMinX + 20;
+                    let farthestY = worldMinY + 20;
+                    let maxMinDist = -Infinity;
+                    
+                    for (let x = worldMinX + 20; x < worldMaxX - bounds.width - 20; x += 20) {
+                        for (let y = worldMinY + 20; y < worldMaxY - bounds.height - 20; y += 20) {
+                            let minDist = Infinity;
+                            for (const placedArea of placedAreas) {
+                                const dist = Math.sqrt(
+                                    Math.pow(x + bounds.width/2 - placedArea.centerX, 2) +
+                                    Math.pow(y + bounds.height/2 - placedArea.centerY, 2)
+                                );
+                                minDist = Math.min(minDist, dist);
+                            }
+                            if (minDist > maxMinDist) {
+                                maxMinDist = minDist;
+                                farthestX = x;
+                                farthestY = y;
+                            }
+                        }
+                    }
+                    
+                    const finalArea = new NonOverlappingArea(
+                        area.id,
+                        farthestX,
+                        farthestY,
+                        bounds.width,
+                        bounds.height,
+                        areaPadding
+                    );
+                    placedAreas.push(finalArea);
+                }
+            }
+            
+            // =====================================================================
+            // STEP 3: POSITION ROOMS IN THEIR ASSIGNED AREAS
+            // =====================================================================
+            
+            placedAreas.forEach(placedArea => {
+                const area = layer.areas.find(a => a.id === placedArea.id);
+                const originalRooms = areaRoomsMap.get(area.id);
+                const originalBounds = areaBoundsMap.get(area.id);
+                
+                // Calculate offset to move rooms to the placed area position
+                const offsetX = placedArea.x - originalBounds.minX;
+                const offsetY = placedArea.y - originalBounds.minY;
+                
+                // Create positioned rooms
+                const positionedRooms = originalRooms.map((room, index) => {
+                    const newRoom = new DeterministicRoom(
+                        index,
+                        area.id,
+                        room.x + offsetX,
+                        room.y + offsetY,
+                        room.width,
+                        room.height,
+                        room.type
+                    );
+                    newRoom.setColor(room.color);
+                    return newRoom;
+                });
+                
+                // Update placed area with actual room positions
+                placedArea.rooms = positionedRooms;
+                placedArea.updateBounds();
+                
+                // Add rooms to global collection
+                positionedRooms.forEach(room => {
+                    allRooms.push(room);
+                    
+                    room.getCells().forEach(cell => {
+                        let type = 1;
+                        if (room.type === 'start') type = 3;
+                        if (room.type === 'boss') type = 4;
+                        setGrid(cell.x, cell.y, type, room, room.areaId);
+                    });
+                });
+                
+                // Mark start room (first area, most central)
+                if (layer.areas.indexOf(area) === 0 && positionedRooms.length > 0) {
+                    let closestRoom = positionedRooms[0];
+                    let minDist = Infinity;
+                    
+                    positionedRooms.forEach(room => {
+                        const dist = Math.sqrt(
+                            Math.pow(room.center.x - placedArea.centerX, 2) +
+                            Math.pow(room.center.y - placedArea.centerY, 2)
+                        );
+                        if (dist < minDist) {
+                            minDist = dist;
+                            closestRoom = room;
+                        }
+                    });
+                    
+                    closestRoom.type = 'start';
+                    closestRoom.setColor(document.getElementById('startColor').value);
+                    
+                    // Update grid
+                    closestRoom.getCells().forEach(cell => {
+                        setGrid(cell.x, cell.y, 3, closestRoom, closestRoom.areaId);
+                    });
+                }
+                
+                // Mark boss room (last area, farthest from start)
+                if (layer.areas.indexOf(area) === layer.areas.length - 1 && positionedRooms.length > 0) {
+                    const startRoom = allRooms.find(r => r.type === 'start');
+                    
+                    if (startRoom) {
+                        let farthestRoom = positionedRooms[0];
+                        let maxDist = -Infinity;
+                        
+                        positionedRooms.forEach(room => {
+                            const dist = room.manhattanDistanceTo(startRoom);
+                            if (dist > maxDist) {
+                                maxDist = dist;
+                                farthestRoom = room;
+                            }
+                        });
+                        
+                        farthestRoom.type = 'boss';
+                        farthestRoom.setColor(document.getElementById('bossColor').value);
+                        
+                        farthestRoom.getCells().forEach(cell => {
+                            setGrid(cell.x, cell.y, 4, farthestRoom, farthestRoom.areaId);
+                        });
+                    }
+                }
+                
+                // Store area data for visualization
+                areaData.push({
+                    id: area.id,
+                    name: area.name,
+                    color: area.color,
+                    centerX: placedArea.centerX,
+                    centerY: placedArea.centerY,
+                    bounds: placedArea.getRoomBounds(),
+                    rooms: positionedRooms
+                });
+            });
+            
+            // =====================================================================
+            // STEP 4: CREATE INTERNAL ROOM CONNECTIONS (MINIMAL SPANNING TREE)
+            // =====================================================================
+            
+            placedAreas.forEach(placedArea => {
+                const area = layer.areas.find(a => a.id === placedArea.id);
+                const areaRooms = placedArea.rooms;
+                
+                if (areaRooms.length > 1) {
+                    const areaRand = new DeterministicRandom(`${layerSeed}_L${layer.id}_A${area.id}_Internal`);
+                    
+                    // Prim's MST with Manhattan distance
+                    const connected = new Set([0]);
+                    const connections = [];
+                    
+                    while (connected.size < areaRooms.length) {
+                        let bestFrom = -1;
+                        let bestTo = -1;
+                        let minDist = Infinity;
+                        
+                        const connectedArray = Array.from(connected).sort((a, b) => a - b);
+                        
+                        for (const fromId of connectedArray) {
+                            for (let toId = 0; toId < areaRooms.length; toId++) {
+                                if (!connected.has(toId)) {
+                                    const dist = areaRooms[fromId].manhattanDistanceTo(areaRooms[toId]);
+                                    
+                                    if (dist < minDist) {
+                                        minDist = dist;
+                                        bestFrom = fromId;
+                                        bestTo = toId;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (bestFrom !== -1 && bestTo !== -1) {
+                            connections.push({ from: bestFrom, to: bestTo });
+                            connected.add(bestTo);
+                            createDeterministicPath(
+                                areaRooms[bestFrom],
+                                areaRooms[bestTo],
+                                grid,
+                                allPaths,
+                                areaRand
+                            );
+                        }
+                    }
+                    
+                    // Add extra connections for better flow (30% of room count)
+                    const extraCount = Math.max(1, Math.floor(area.roomCount * 0.3));
+                    for (let i = 0; i < extraCount; i++) {
+                        const from = areaRand.nextInt(0, areaRooms.length - 1);
+                        let to = areaRand.nextInt(0, areaRooms.length - 1);
+                        while (to === from) to = areaRand.nextInt(0, areaRooms.length - 1);
+                        
+                        const exists = connections.some(c => 
+                            (c.from === from && c.to === to) || (c.from === to && c.to === from)
+                        );
+                        
+                        if (!exists) {
+                            connections.push({ from, to });
+                            createDeterministicPath(
+                                areaRooms[from],
+                                areaRooms[to],
+                                grid,
+                                allPaths,
+                                areaRand
+                            );
+                        }
+                    }
+                }
+            });
+            
+            // =====================================================================
+            // STEP 5: CREATE AREA-TO-AREA CONNECTIONS (CLOSEST ROOMS)
+            // =====================================================================
+            
+            layer.areaConnections.forEach(conn => {
+                const area1 = layer.areas.find(a => a.id === conn.fromArea);
+                const area2 = layer.areas.find(a => a.id === conn.toArea);
+                
+                const placedArea1 = placedAreas.find(pa => pa.id === area1.id);
+                const placedArea2 = placedAreas.find(pa => pa.id === area2.id);
+                
+                if (!placedArea1 || !placedArea2) return;
+                
+                const rooms1 = placedArea1.rooms;
+                const rooms2 = placedArea2.rooms;
+                
+                if (rooms1.length === 0 || rooms2.length === 0) return;
+                
+                const pathCount = Math.min(conn.pathCount, 3);
+                const connRand = new DeterministicRandom(`${layerSeed}_L${layer.id}_Conn_${area1.id}_${area2.id}`);
+                
+                // Calculate all distances
+                const distances = [];
+                rooms1.forEach(room1 => {
+                    rooms2.forEach(room2 => {
+                        distances.push({
+                            room1,
+                            room2,
+                            dist: room1.manhattanDistanceTo(room2),
+                            id1: room1.id,
+                            id2: room2.id
+                        });
+                    });
+                });
+                
+                // Sort by distance
+                distances.sort((a, b) => {
+                    if (a.dist !== b.dist) return a.dist - b.dist;
+                    if (a.id1 !== b.id1) return a.id1 - b.id1;
+                    return a.id2 - b.id2;
+                });
+                
+                // Create connections using closest distinct rooms
+                const usedPairs = new Set();
+                let pathsCreated = 0;
+                
+                for (const pair of distances) {
+                    if (pathsCreated >= pathCount) break;
+                    
+                    const pairKey = `${Math.min(pair.room1.id, pair.room2.id)}-${Math.max(pair.room1.id, pair.room2.id)}`;
+                    
+                    if (!usedPairs.has(pairKey)) {
+                        createDeterministicPath(
+                            pair.room1,
+                            pair.room2,
+                            grid,
+                            allPaths,
+                            connRand
+                        );
+                        usedPairs.add(pairKey);
+                        pathsCreated++;
+                    }
+                }
+            });
+            
+            // =====================================================================
+            // STEP 6: CALCULATE DISPLAY BOUNDS AND CREATE MAP
+            // =====================================================================
+            
+            const bounds = calculateBounds(grid, allRooms, worldMinX, worldMaxX, worldMinY, worldMaxY);
+            
+            // Verify no overlapping areas
+            let overlapDetected = false;
+            for (let i = 0; i < placedAreas.length; i++) {
+                for (let j = i + 1; j < placedAreas.length; j++) {
+                    if (placedAreas[i].overlapsWith(placedAreas[j])) {
+                        overlapDetected = true;
+                        console.error('Overlap detected!', placedAreas[i], placedAreas[j]);
+                    }
+                }
+            }
+            
+            const map = {
+                layerId: layerId,
+                worldBounds: { minX: worldMinX, maxX: worldMaxX, minY: worldMinY, maxY: worldMaxY },
+                rooms: allRooms,
+                paths: allPaths,
+                grid: grid,
+                displayBounds: bounds,
+                hasContent: allRooms.length > 0,
+                areaData: areaData,
+                nonOverlappingAreas: placedAreas,
+                overlapFree: !overlapDetected,
+                generationSeed: layerSeed,
+                roomCount: allRooms.length,
+                pathCount: allPaths.length
+            };
+            
+            layerMaps.set(layerId, map);
+            
+            const layerIndex = config.layers.findIndex(l => l.id === layerId);
+            if (layerIndex !== -1) {
+                config.layers[layerIndex].hasContent = map.hasContent;
+                updateLayersUI();
+            }
+            
+            displayLayerMap(layerId);
+            generateOutputForAllLayers();
+            
+            return map;
+        }
+
+        function createDeterministicPath(room1, room2, grid, paths, random) {
+            const start = room1.center;
+            const end = room2.center;
+            
+            let x = start.x;
+            let y = start.y;
+            
+            // L-shaped path
+            const horizontalFirst = random.next() > 0.5;
+            
+            if (horizontalFirst) {
+                while (x !== end.x) {
+                    const cell = grid.get(`${x},${y}`);
+                    if (!cell || cell.type === 0) {
+                        const pathColor = getDefaultColor(2);
+                        grid.set(`${x},${y}`, {
+                            type: 2,
+                            room: null,
+                            areaId: null,
+                            color: pathColor.color,
+                            colorHex: pathColor.colorHex
+                        });
+                        paths.push({x, y, type: 'path'});
+                    }
+                    x += (end.x > x) ? 1 : -1;
+                }
+                
+                while (y !== end.y) {
+                    const cell = grid.get(`${x},${y}`);
+                    if (!cell || cell.type === 0) {
+                        const pathColor = getDefaultColor(2);
+                        grid.set(`${x},${y}`, {
+                            type: 2,
+                            room: null,
+                            areaId: null,
+                            color: pathColor.color,
+                            colorHex: pathColor.colorHex
+                        });
+                        paths.push({x, y, type: 'path'});
+                    }
+                    y += (end.y > y) ? 1 : -1;
+                }
+            } else {
+                while (y !== end.y) {
+                    const cell = grid.get(`${x},${y}`);
+                    if (!cell || cell.type === 0) {
+                        const pathColor = getDefaultColor(2);
+                        grid.set(`${x},${y}`, {
+                            type: 2,
+                            room: null,
+                            areaId: null,
+                            color: pathColor.color,
+                            colorHex: pathColor.colorHex
+                        });
+                        paths.push({x, y, type: 'path'});
+                    }
+                    y += (end.y > y) ? 1 : -1;
+                }
+                
+                while (x !== end.x) {
+                    const cell = grid.get(`${x},${y}`);
+                    if (!cell || cell.type === 0) {
+                        const pathColor = getDefaultColor(2);
+                        grid.set(`${x},${y}`, {
+                            type: 2,
+                            room: null,
+                            areaId: null,
+                            color: pathColor.color,
+                            colorHex: pathColor.colorHex
+                        });
+                        paths.push({x, y, type: 'path'});
+                    }
+                    x += (end.x > x) ? 1 : -1;
+                }
+            }
+        }
+
+        // =========================================================================
+        // UTILITY FUNCTIONS
+        // =========================================================================
+        
+        function colorToHex(color) {
+            if (color.startsWith('#')) {
+                return color.replace('#', '');
+            }
+            return '3fc00b';
+        }
+
+        function getDefaultColor(type) {
+            switch(type) {
+                case 2: 
+                    return {
+                        color: document.getElementById('pathColor').value,
+                        colorHex: colorToHex(document.getElementById('pathColor').value)
+                    };
+                case 3: 
+                    return {
+                        color: document.getElementById('startColor').value,
+                        colorHex: colorToHex(document.getElementById('startColor').value)
+                    };
+                case 4: 
+                    return {
+                        color: document.getElementById('bossColor').value,
+                        colorHex: colorToHex(document.getElementById('bossColor').value)
+                    };
+                default: 
+                    return {
+                        color: '#3fc00b',
+                        colorHex: '3fc00b'
+                    };
+            }
+        }
+
+        function calculateBounds(grid, rooms, worldMinX, worldMaxX, worldMinY, worldMaxY) {
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            
+            rooms.forEach(room => {
+                minX = Math.min(minX, room.x);
+                maxX = Math.max(maxX, room.x + room.width - 1);
+                minY = Math.min(minY, room.y);
+                maxY = Math.max(maxY, room.y + room.height - 1);
+            });
+            
+            for (const [key] of grid) {
+                const [x, y] = key.split(',').map(Number);
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+            }
+            
+            minX = Math.min(minX, worldMinX);
+            maxX = Math.max(maxX, worldMaxX);
+            minY = Math.min(minY, worldMinY);
+            maxY = Math.max(maxY, worldMaxY);
+            
+            const padding = 15;
+            return {
+                minX: minX - padding,
+                maxX: maxX + padding,
+                minY: minY - padding,
+                maxY: maxY + padding
+            };
+        }
+
+        function shouldHaveBorder(map, x, y, side, cellData) {
+            if (cellData.type === 0) return false;
+            
+            const worldBounds = map.worldBounds;
+            
+            if (side === 'top' && y === worldBounds.minY) return true;
+            if (side === 'right' && x === worldBounds.maxX) return true;
+            if (side === 'bottom' && y === worldBounds.maxY) return true;
+            if (side === 'left' && x === worldBounds.minX) return true;
+            
+            let adjX = x, adjY = y;
+            switch(side) {
+                case 'top': adjY = y - 1; break;
+                case 'right': adjX = x + 1; break;
+                case 'bottom': adjY = y + 1; break;
+                case 'left': adjX = x - 1; break;
+            }
+            
+            if (adjX < worldBounds.minX || adjX > worldBounds.maxX || 
+                adjY < worldBounds.minY || adjY > worldBounds.maxY) {
+                return true;
+            }
+            
+            const adjacentCell = map.grid.get(`${adjX},${adjY}`);
+            
+            if (!adjacentCell || adjacentCell.type === 0) {
+                return true;
+            }
+            
+            if (adjacentCell.colorHex !== cellData.colorHex) {
+                return true;
+            }
+            
+            if (cellData.room && adjacentCell.room) {
+                return cellData.room.id !== adjacentCell.room.id || cellData.room.areaId !== adjacentCell.room.areaId;
+            }
+            
+            return false;
+        }
+
+        function getBorderColor(side) {
+            switch(side) {
+                case 'top': return document.getElementById('borderTop').value;
+                case 'right': return document.getElementById('borderRight').value;
+                case 'bottom': return document.getElementById('borderBottom').value;
+                case 'left': return document.getElementById('borderLeft').value;
+                default: return document.getElementById('borderTop').value;
+            }
+        }
+
+        // =========================================================================
+        // DISPLAY FUNCTIONS
+        // =========================================================================
+        
+        function displayLayerMap(layerId) {
+            const map = layerMaps.get(layerId);
+            if (!map) {
+                mapDisplay.innerHTML = '<div class="warning">No map generated for this layer yet. Click "Generate Current Layer".</div>';
+                statsDisplay.innerHTML = '';
+                return;
+            }
+            
+            displayMap(map);
+            updateStats(map);
+        }
+
+        function updateStats(map) {
+            const layer = config.layers.find(l => l.id === map.layerId);
+            
+            let totalRoomCells = 0;
+            let totalPathCells = map.paths.length;
+            let totalAreaDist = 0;
+            let areaPairCount = 0;
+            
+            map.rooms.forEach(room => {
+                totalRoomCells += room.width * room.height;
+            });
+            
+            // Calculate average room distance within areas
+            if (map.areaData) {
+                map.areaData.forEach(area => {
+                    if (area.rooms.length > 1) {
+                        for (let i = 0; i < area.rooms.length; i++) {
+                            for (let j = i + 1; j < area.rooms.length; j++) {
+                                totalAreaDist += area.rooms[i].manhattanDistanceTo(area.rooms[j]);
+                                areaPairCount++;
+                            }
+                        }
+                    }
+                });
+            }
+            
+            const avgRoomDist = areaPairCount > 0 ? Math.round(totalAreaDist / areaPairCount) : 0;
+            
+            statsDisplay.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${map.rooms.length}</div>
+                    <div class="stat-label">Rooms</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${layer ? layer.areas.length : 0}</div>
+                    <div class="stat-label">Areas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${totalRoomCells}</div>
+                    <div class="stat-label">Room Cells</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${totalPathCells}</div>
+                    <div class="stat-label">Path Cells</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${avgRoomDist}</div>
+                    <div class="stat-label">Avg Room Dist</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${map.overlapFree ? '✓' : '✗'}</div>
+                    <div class="stat-label">No Overlap</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${map.generationSeed.substring(0, 6)}</div>
+                    <div class="stat-label">Seed</div>
+                </div>
+            `;
+        }
+
+        function displayMap(map) {
+            mapDisplay.innerHTML = '';
+            
+            const bounds = map.displayBounds;
+            const width = bounds.maxX - bounds.minX + 1;
+            const height = bounds.maxY - bounds.minY + 1;
+            
+            const container = document.createElement('div');
+            container.className = 'map-container';
+            container.style.position = 'relative';
+            
+            const coordLabel = document.createElement('div');
+            coordLabel.className = 'coordinate-system';
+            coordLabel.textContent = `Layer ${map.layerId} | Areas: ${map.areaData.length} | Overlap Free: ${map.overlapFree ? '✓' : '✗'}`;
+            container.appendChild(coordLabel);
+            
+            // Draw area boundaries
+            if (config.showAreaBoundaries && map.nonOverlappingAreas) {
+                map.nonOverlappingAreas.forEach(area => {
+                    const areaBounds = area.getRoomBounds();
+                    if (areaBounds) {
+                        const boundaryDiv = document.createElement('div');
+                        boundaryDiv.className = 'area-boundary';
+                        boundaryDiv.style.left = `${(areaBounds.minX - bounds.minX) * 14}px`;
+                        boundaryDiv.style.top = `${(areaBounds.minY - bounds.minY) * 14}px`;
+                        boundaryDiv.style.width = `${(areaBounds.maxX - areaBounds.minX + 1) * 14}px`;
+                        boundaryDiv.style.height = `${(areaBounds.maxY - areaBounds.minY + 1) * 14}px`;
+                        
+                        // Find area color
+                        const areaData = map.areaData.find(ad => ad.id === area.id);
+                        boundaryDiv.style.borderColor = areaData ? areaData.color : '#ffffff';
+                        boundaryDiv.style.borderWidth = '2px';
+                        boundaryDiv.style.borderStyle = 'solid';
+                        boundaryDiv.title = `Area ${area.id} - Strictly Non-Overlapping`;
+                        container.appendChild(boundaryDiv);
+                    }
+                    
+                    // Area center marker
+                    const centerX = (area.centerX - bounds.minX) * 14 + 7;
+                    const centerY = (area.centerY - bounds.minY) * 14 + 7;
+                    
+                    const centerMarker = document.createElement('div');
+                    centerMarker.className = 'area-center-marker';
+                    centerMarker.style.left = `${centerX}px`;
+                    centerMarker.style.top = `${centerY}px`;
+                    container.appendChild(centerMarker);
+                });
+            }
+            
+            const grid = document.createElement('div');
+            grid.className = 'map-grid';
+            grid.style.gridTemplateColumns = `repeat(${width}, 14px)`;
+            
+            for (let y = bounds.minY; y <= bounds.maxY; y++) {
+                for (let x = bounds.minX; x <= bounds.maxX; x++) {
+                    const cellData = map.grid.get(`${x},${y}`) || { 
+                        type: 0, 
+                        room: null, 
+                        color: '#111111'
+                    };
+                    
+                    const cellDiv = document.createElement('div');
+                    cellDiv.className = 'cell';
+                    cellDiv.style.backgroundColor = cellData.color;
+                    
+                    if (cellData.type === 1) cellDiv.classList.add('room');
+                    else if (cellData.type === 2) cellDiv.classList.add('path');
+                    else if (cellData.type >= 3) cellDiv.classList.add('room', 'special');
+                    
+                    // Scene indicator
+                    const sceneKey = `${x},${y},${map.layerId}`;
+                    const scenePath = sceneAssignments.get(sceneKey);
+                    if (scenePath) {
+                        const indicator = document.createElement('div');
+                        indicator.className = 'scene-indicator';
+                        indicator.title = scenePath;
+                        cellDiv.appendChild(indicator);
+                    }
+                    
+                    // Room ID
+                    if (cellData.type === 1 || cellData.type >= 3) {
+                        if (cellData.room) {
+                            const idSpan = document.createElement('span');
+                            idSpan.className = 'room-id';
+                            idSpan.textContent = `${cellData.room.areaId}.${cellData.room.id + 1}`;
+                            cellDiv.appendChild(idSpan);
+                        }
+                    }
+                    
+                    // Borders
+                    if (shouldHaveBorder(map, x, y, 'top', cellData)) {
+                        cellDiv.style.borderTop = '2px solid ' + getBorderColor('top');
+                    }
+                    if (shouldHaveBorder(map, x, y, 'right', cellData)) {
+                        cellDiv.style.borderRight = '2px solid ' + getBorderColor('right');
+                    }
+                    if (shouldHaveBorder(map, x, y, 'bottom', cellData)) {
+                        cellDiv.style.borderBottom = '2px solid ' + getBorderColor('bottom');
+                    }
+                    if (shouldHaveBorder(map, x, y, 'left', cellData)) {
+                        cellDiv.style.borderLeft = '2px solid ' + getBorderColor('left');
+                    }
+                    
+                    grid.appendChild(cellDiv);
+                }
+            }
+            
+            container.appendChild(grid);
+            mapDisplay.appendChild(container);
+            updateLegend();
+        }
+
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            legend.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${document.getElementById('pathColor').value};"></div>
+                    <span>Path</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${document.getElementById('startColor').value};"></div>
+                    <span>Start Room</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: ${document.getElementById('bossColor').value};"></div>
+                    <span>Boss Room</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: transparent; border: 2px solid ${getBorderColor('top')};"></div>
+                    <span>Border</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: transparent; border: 2px solid white;"></div>
+                    <span>Area Boundary</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #ffd43b; width: 8px; height: 8px; border-radius: 50%;"></div>
+                    <span>Area Center</span>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // VALIDATION FUNCTIONS
+        // =========================================================================
+        
+        function validateNoOverlap() {
+            const activeLayer = config.layers.find(l => l.isActive);
+            if (!activeLayer) return;
+            
+            const map = layerMaps.get(activeLayer.id);
+            if (!map) {
+                alert('Generate a map first!');
+                return;
+            }
+            
+            if (map.overlapFree) {
+                alert('✅ VALIDATION PASSED: No overlapping areas detected!\n\nAll areas are properly separated with padding.');
+            } else {
+                alert('❌ VALIDATION FAILED: Overlapping areas detected!\n\nTry increasing Area Padding or World Size.');
+            }
+        }
+
+        function generateMapsForAllLayers() {
+            config.layers.forEach(layer => {
+                generateMapForLayer(layer.id);
+            });
+        }
+
+        // =========================================================================
+        // OUTPUT GENERATION
+        // =========================================================================
+        
+        function generateOutputForAllLayers() {
+            let output = '';
+            
+            const layersWithContent = Array.from(layerMaps.values())
+                .filter(map => map.hasContent)
+                .sort((a, b) => a.layerId - b.layerId);
+            
+            if (layersWithContent.length === 0) {
+                outputTextarea.value = '';
+                return;
+            }
+            
+            const borderTopHex = document.getElementById('borderTop').value.replace('#', '');
+            const borderRightHex = document.getElementById('borderRight').value.replace('#', '');
+            const borderBottomHex = document.getElementById('borderBottom').value.replace('#', '');
+            const borderLeftHex = document.getElementById('borderLeft').value.replace('#', '');
+            
+            layersWithContent.forEach(map => {
+                const cells = [];
+                
+                for (const [key, cellData] of map.grid) {
+                    if (cellData.type > 0) {
+                        const [x, y] = key.split(',').map(Number);
+                        cells.push({ x, y, data: cellData });
+                    }
+                }
+                
+                cells.sort((a, b) => {
+                    if (a.y !== b.y) return a.y - b.y;
+                    return a.x - b.x;
+                });
+                
+                cells.forEach(({ x, y, data }) => {
+                    output += `[${x},${y},${map.layerId}]\n`;
+                    
+                    const top = shouldHaveBorder(map, x, y, 'top', data) ? 0 : -1;
+                    const right = shouldHaveBorder(map, x, y, 'right', data) ? 0 : -1;
+                    const bottom = shouldHaveBorder(map, x, y, 'bottom', data) ? 0 : -1;
+                    const left = shouldHaveBorder(map, x, y, 'left', data) ? 0 : -1;
+                    
+                    const cellColor = data.colorHex;
+                    
+                    const borderTop = top === 0 ? borderTopHex : '';
+                    const borderRight = right === 0 ? borderRightHex : '';
+                    const borderBottom = bottom === 0 ? borderBottomHex : '';
+                    const borderLeft = left === 0 ? borderLeftHex : '';
+                    
+                    let line = `${right},${bottom},${left},${top}|${cellColor},${borderRight},${borderBottom},${borderLeft},${borderTop}||`;
+                    
+                    const sceneKey = `${x},${y},${map.layerId}`;
+                    const scenePath = sceneAssignments.get(sceneKey);
+                    if (scenePath) {
+                        line += scenePath;
+                    }
+                    
+                    output += line + '\n';
+                });
+            });
+            
+            outputTextarea.value = output;
+        }
+
+        // =========================================================================
+        // EVENT LISTENERS
+        // =========================================================================
+        
+        generateCurrentBtn.addEventListener('click', () => {
+            generateMapForLayer(config.activeLayerId);
+        });
+
+        generateAllBtn.addEventListener('click', () => {
+            generateMapsForAllLayers();
+        });
+
+        validateOverlapBtn.addEventListener('click', validateNoOverlap);
+
+        exportBtn.addEventListener('click', () => {
+            const data = outputTextarea.value;
+            if (!data || data.trim() === '') {
+                alert('Please generate a map first!');
+                return;
+            }
+            
+            const blob = new Blob([data], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'MapData.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        copyBtn.addEventListener('click', () => {
+            outputTextarea.select();
+            document.execCommand('copy');
+            alert('Map data copied to clipboard!');
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            exportBtn.click();
+        });
+
+        randomizeSeedBtn.addEventListener('click', () => {
+            const random = new DeterministicRandom(Date.now().toString());
+            const newSeed = `seed_${random.nextInt(10000, 99999)}`;
+            globalSeedInput.value = newSeed;
+            saveSettings();
+        });
+
+        addLayerBtn.addEventListener('click', () => {
+            const newLayerId = Math.max(...config.layers.map(l => l.id), 0) + 1;
+            config.layers.push(createDefaultLayer(newLayerId));
+            saveSettings();
+            updateLayersUI();
+        });
+
+        clearScenesBtn.addEventListener('click', () => {
+            sceneAssignments.clear();
+            updateSceneAssignmentsDisplay();
+            generateOutputForAllLayers();
+        });
+
+        function updateSceneAssignmentsDisplay() {
+            const div = document.getElementById('sceneAssignments');
+            if (sceneAssignments.size === 0) {
+                div.innerHTML = '<div class="scene-count">No scene assignments loaded</div>';
+                return;
+            }
+            
+            let html = `<div class="scene-count">${sceneAssignments.size} scene assignment(s):</div>`;
+            let count = 0;
+            
+            for (const [key, path] of sceneAssignments) {
+                if (count >= 5) break;
+                const [x, y, z] = key.split(',').map(Number);
+                html += `<div class="scene-item"><div class="scene-coords">[${x},${y},${z}]</div><div class="scene-path">${path}</div></div>`;
+                count++;
+            }
+            
+            div.innerHTML = html;
+        }
+
+        // Input change handlers
+        [widthInput, heightInput, globalSeedInput, areaPaddingInput, connectionDistanceInput, maxPlacementAttemptsInput].forEach(input => {
+            input.addEventListener('change', saveSettings);
+        });
+
+        centerAtOriginCheckbox.addEventListener('change', saveSettings);
+        showAreaBoundariesCheckbox.addEventListener('change', saveSettings);
+
+        document.querySelectorAll('input[type="color"]').forEach(input => {
+            input.addEventListener('change', () => {
+                updateHexDisplays();
+                generateOutputForAllLayers();
+            });
+        });
+
+        // Initialize
+        init();
+    </script>
+</body>
+</html>
